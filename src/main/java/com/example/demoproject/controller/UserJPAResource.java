@@ -21,6 +21,8 @@ import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;*/
 
 import com.example.demoproject.dao.UserDao;
+import com.example.demoproject.user.Post;
+import com.example.demoproject.user.PostRepository;
 import com.example.demoproject.user.User;
 import com.example.demoproject.user.UserNotFoundException;
 import com.example.demoproject.user.UserRepository;
@@ -33,6 +35,9 @@ public class UserJPAResource {
 	
 	@Autowired
 	private UserRepository userRepository;
+	
+	@Autowired
+	private PostRepository postRepository;
 	
 	@GetMapping(path= "/jpa/users")
 	public List<User> getAllUsers() {
@@ -77,6 +82,39 @@ public class UserJPAResource {
 	@DeleteMapping(path="/jpa/users/{id}")
 	public void deleteByID(@PathVariable int id) {
 		userRepository.deleteById(id);
+	}
+	
+	@GetMapping(path= "/jpa/users/{id}/posts")
+	public List<Post> getAllPosts(@PathVariable int id) {
+		
+		Optional<User> optionalUser = userRepository.findById(id); 
+		if(!optionalUser.isPresent()) {
+			throw new UserNotFoundException("id -"+id);
+		}
+		return optionalUser.get().getPosts();
+	}
+	
+	
+	@PostMapping("/jpa/users/{id}/posts")
+	public ResponseEntity<Object> createPost(@PathVariable int id, @RequestBody Post post) {
+		
+		
+		Optional<User> optionalUser = userRepository.findById(id); 
+		if(!optionalUser.isPresent()) {
+			throw new UserNotFoundException("id -"+id);
+		}
+		
+		User user = optionalUser.get();
+		
+		post.setUser(user);
+		postRepository.save(post);
+		
+		URI location = ServletUriComponentsBuilder.
+		fromCurrentRequest().
+		path("/{id}").
+		buildAndExpand(post.getId()).toUri();
+		
+		return ResponseEntity.created(location).build();
 	}
 	
 	
